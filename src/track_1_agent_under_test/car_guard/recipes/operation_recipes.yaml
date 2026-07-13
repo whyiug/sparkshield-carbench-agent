@@ -1,0 +1,1130 @@
+schema_version: 1
+recipes:
+  - id: air_conditioning
+    domain: climate
+    intent_patterns: [set_air_conditioning, enable_air_conditioning, disable_air_conditioning, control_ac]
+    semantic_preconditions: [vehicle_climate_state_observed]
+    read_operations:
+      - semantic_operation: read_climate_settings
+        tool_names: [get_climate_settings]
+      - semantic_operation: read_window_positions
+        tool_names: [get_vehicle_window_positions]
+    write_operations:
+      - semantic_operation: set_air_conditioning
+        tool_names: [set_air_conditioning]
+        parameter_mapping: {enabled: "on"}
+        required_semantic_parameters: [enabled]
+    evidence_needs:
+      - proposition: fan_speed
+        read_operation: read_climate_settings
+      - proposition: window_driver_position
+        read_operation: read_window_positions
+      - proposition: window_passenger_position
+        read_operation: read_window_positions
+      - proposition: window_driver_rear_position
+        read_operation: read_window_positions
+      - proposition: window_passenger_rear_position
+        read_operation: read_window_positions
+    parameter_derivations: [enabled_from_explicit_user_request]
+    policy_hooks: [POL-011]
+    parallel_read_groups: [[read_climate_settings, read_window_positions]]
+    write_order:
+      - close_driver_window_for_ac
+      - close_passenger_window_for_ac
+      - close_driver_rear_window_for_ac
+      - close_passenger_rear_window_for_ac
+      - set_minimum_fan_for_ac
+      - set_air_conditioning
+    completion_evidence: [air_conditioning_enabled_state]
+    conditional_requirements:
+      - id: close_driver_window_before_ac
+        when: {proposition: window_driver_position, operator: gt, value: 20}
+        policy_hook: POL-011
+        operation:
+          semantic_operation: close_driver_window_for_ac
+          tool_names: [open_close_window]
+          fixed_arguments: {window: DRIVER, percentage: 0}
+      - id: close_passenger_window_before_ac
+        when: {proposition: window_passenger_position, operator: gt, value: 20}
+        policy_hook: POL-011
+        operation:
+          semantic_operation: close_passenger_window_for_ac
+          tool_names: [open_close_window]
+          fixed_arguments: {window: PASSENGER, percentage: 0}
+      - id: close_driver_rear_window_before_ac
+        when: {proposition: window_driver_rear_position, operator: gt, value: 20}
+        policy_hook: POL-011
+        operation:
+          semantic_operation: close_driver_rear_window_for_ac
+          tool_names: [open_close_window]
+          fixed_arguments: {window: DRIVER_REAR, percentage: 0}
+      - id: close_passenger_rear_window_before_ac
+        when: {proposition: window_passenger_rear_position, operator: gt, value: 20}
+        policy_hook: POL-011
+        operation:
+          semantic_operation: close_passenger_rear_window_for_ac
+          tool_names: [open_close_window]
+          fixed_arguments: {window: PASSENGER_REAR, percentage: 0}
+      - id: start_fan_before_ac
+        when: {proposition: fan_speed, operator: eq, value: 0}
+        policy_hook: POL-011
+        operation:
+          semantic_operation: set_minimum_fan_for_ac
+          tool_names: [set_fan_speed]
+          fixed_arguments: {level: 1}
+    primary_operation: set_air_conditioning
+    on_unavailable: explain_without_internal_names
+    terminal_after_success: false
+
+  - id: climate_temperature
+    domain: climate
+    intent_patterns: [set_climate_temperature, set_cabin_temperature]
+    read_operations:
+      - semantic_operation: read_cabin_temperatures
+        tool_names: [get_temperature_inside_car]
+    write_operations:
+      - semantic_operation: set_climate_temperature
+        tool_names: [set_climate_temperature]
+        parameter_mapping: {temperature: temperature, seat_zone: seat_zone}
+        required_semantic_parameters: [temperature, seat_zone]
+    evidence_needs: []
+    parameter_derivations: [temperature_and_zone_from_explicit_user_request, relative_temperature_from_current_zone_settings]
+    policy_hooks: [POL-012]
+    parallel_read_groups: []
+    write_order: [set_climate_temperature]
+    completion_evidence: [climate_temperature_state]
+    primary_operation: set_climate_temperature
+
+  - id: fan_control
+    domain: fan
+    intent_patterns: [set_fan, set_fan_speed, set_fan_airflow_direction, set_air_circulation]
+    read_operations:
+      - semantic_operation: read_climate_settings
+        tool_names: [get_climate_settings]
+    write_operations:
+      - semantic_operation: set_fan_speed
+        tool_names: [set_fan_speed]
+        parameter_mapping: {level: level}
+        required_semantic_parameters: [level]
+      - semantic_operation: set_fan_airflow_direction
+        tool_names: [set_fan_airflow_direction]
+        parameter_mapping: {direction: direction}
+        required_semantic_parameters: [direction]
+      - semantic_operation: set_air_circulation
+        tool_names: [set_air_circulation]
+        parameter_mapping: {mode: mode}
+        required_semantic_parameters: [mode]
+    evidence_needs: []
+    parameter_derivations: [fan_setting_from_explicit_or_preference]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: [set_fan_speed, set_fan_airflow_direction, set_air_circulation]
+    completion_evidence: [climate_fan_state]
+    primary_operation: set_fan_speed
+
+  - id: window_defrost
+    domain: defrost
+    intent_patterns: [set_window_defrost, enable_defrost, disable_defrost]
+    read_operations:
+      - semantic_operation: read_climate_settings
+        tool_names: [get_climate_settings]
+    write_operations:
+      - semantic_operation: set_window_defrost
+        tool_names: [set_window_defrost]
+        parameter_mapping: {enabled: "on", window: defrost_window}
+        required_semantic_parameters: [enabled, window]
+    evidence_needs: []
+    parameter_derivations: [defrost_state_and_window_from_intent]
+    policy_hooks: [POL-010]
+    parallel_read_groups: []
+    write_order: [set_window_defrost]
+    completion_evidence: [window_defrost_state]
+    primary_operation: set_window_defrost
+
+  - id: seat_heating
+    domain: seat_heating
+    intent_patterns: [set_seat_heating, heat_seat]
+    read_operations:
+      - semantic_operation: read_seat_heating
+        tool_names: [get_seat_heating_level]
+      - semantic_operation: read_seat_occupancy
+        tool_names: [get_seats_occupancy]
+    write_operations:
+      - semantic_operation: set_seat_heating
+        tool_names: [set_seat_heating]
+        parameter_mapping: {level: level, seat_zone: seat_zone}
+        required_semantic_parameters: [level, seat_zone]
+    evidence_needs:
+      - proposition: seat_occupancy_state
+        read_operation: read_seat_occupancy
+    parameter_derivations: [seat_zone_from_user_or_driver_context]
+    policy_hooks: []
+    parallel_read_groups: [[read_seat_heating, read_seat_occupancy]]
+    write_order: [set_seat_heating]
+    completion_evidence: [seat_heating_level]
+    primary_operation: set_seat_heating
+
+  - id: steering_wheel_heating
+    domain: steering_heating
+    intent_patterns: [set_steering_wheel_heating, heat_steering_wheel]
+    read_operations:
+      - semantic_operation: read_steering_wheel_heating
+        tool_names: [get_steering_wheel_heating_level]
+    write_operations:
+      - semantic_operation: set_steering_wheel_heating
+        tool_names: [set_steering_wheel_heating]
+        parameter_mapping: {level: level}
+        required_semantic_parameters: [level]
+    evidence_needs: []
+    parameter_derivations: [heating_level_from_intent]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: [set_steering_wheel_heating]
+    completion_evidence: [steering_wheel_heating_level]
+    primary_operation: set_steering_wheel_heating
+
+  - id: window_control
+    domain: windows
+    intent_patterns: [open_window, close_window, set_window_position, open_close_window]
+    read_operations:
+      - semantic_operation: read_window_positions
+        tool_names: [get_vehicle_window_positions]
+    write_operations:
+      - semantic_operation: set_window_position
+        tool_names: [open_close_window]
+        parameter_mapping: {window: window, percentage: percentage}
+        required_semantic_parameters: [window, percentage]
+    evidence_needs: []
+    parameter_derivations: [window_and_percentage_from_intent]
+    policy_hooks: [POL-007]
+    parallel_read_groups: []
+    write_order: [set_window_position]
+    completion_evidence: [window_position]
+    primary_operation: set_window_position
+
+  - id: sunroof_control
+    domain: sunroof
+    intent_patterns: [open_sunroof, close_sunroof, set_sunroof_position, open_close_sunroof]
+    semantic_preconditions: [weather_and_sunshade_state_observed]
+    read_operations:
+      - semantic_operation: read_sunroof_and_sunshade
+        tool_names: [get_sunroof_and_sunshade_position]
+    write_operations:
+      - semantic_operation: set_sunroof_position
+        tool_names: [open_close_sunroof]
+        parameter_mapping: {percentage: percentage}
+        required_semantic_parameters: [percentage]
+    evidence_needs:
+      - proposition: sunshade_open_percentage
+        read_operation: read_sunroof_and_sunshade
+      - proposition: weather_allows_sunroof
+        acceptable_sources: [tool_result, derived]
+    parameter_derivations: [sunroof_percentage_from_intent]
+    policy_hooks: [POL-005, POL-008, POL-009]
+    parallel_read_groups: []
+    write_order: [open_sunshade_for_sunroof, set_sunroof_position]
+    completion_evidence: [sunroof_position]
+    conditional_requirements:
+      - id: open_sunshade_before_sunroof
+        when: {proposition: sunshade_open_percentage, operator: lt, value: 100}
+        policy_hook: POL-005
+        operation:
+          semantic_operation: open_sunshade_for_sunroof
+          tool_names: [open_close_sunshade]
+          fixed_arguments: {percentage: 100}
+    primary_operation: set_sunroof_position
+
+  - id: sunshade_control
+    domain: sunshade
+    intent_patterns: [open_sunshade, close_sunshade, set_sunshade_position, open_close_sunshade]
+    read_operations:
+      - semantic_operation: read_sunroof_and_sunshade
+        tool_names: [get_sunroof_and_sunshade_position]
+    write_operations:
+      - semantic_operation: set_sunshade_position
+        tool_names: [open_close_sunshade]
+        parameter_mapping: {percentage: percentage}
+        required_semantic_parameters: [percentage]
+    evidence_needs: []
+    parameter_derivations: [sunshade_percentage_from_intent]
+    policy_hooks: [POL-005]
+    parallel_read_groups: []
+    write_order: [set_sunshade_position]
+    completion_evidence: [sunshade_position]
+    primary_operation: set_sunshade_position
+
+  - id: trunk_control
+    domain: trunk
+    intent_patterns: [open_trunk, close_trunk, set_trunk_position, open_close_trunk_door]
+    read_operations:
+      - semantic_operation: read_trunk_position
+        tool_names: [get_trunk_door_position]
+    write_operations:
+      - semantic_operation: set_trunk_position
+        tool_names: [open_close_trunk_door]
+        parameter_mapping: {action: action}
+        required_semantic_parameters: [action]
+    evidence_needs: []
+    parameter_derivations: [trunk_action_from_intent]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: [set_trunk_position]
+    completion_evidence: [trunk_position]
+    primary_operation: set_trunk_position
+
+  - id: exterior_lighting
+    domain: exterior_lights
+    intent_patterns: [set_fog_lights, set_high_beams, set_low_beams]
+    read_operations:
+      - semantic_operation: read_exterior_lights
+        tool_names: [get_exterior_lights_status]
+    write_operations:
+      - semantic_operation: set_fog_lights
+        tool_names: [set_fog_lights]
+        parameter_mapping: {enabled: "on"}
+        required_semantic_parameters: [enabled]
+      - semantic_operation: set_high_beams
+        tool_names: [set_head_lights_high_beams]
+        parameter_mapping: {enabled: "on"}
+        required_semantic_parameters: [enabled]
+      - semantic_operation: set_low_beams
+        tool_names: [set_head_lights_low_beams]
+        parameter_mapping: {enabled: "on"}
+        required_semantic_parameters: [enabled]
+    evidence_needs: []
+    parameter_derivations: [light_state_from_intent]
+    policy_hooks: [POL-008, POL-009, POL-013, POL-014]
+    parallel_read_groups: []
+    write_order: [set_fog_lights, set_low_beams, set_high_beams]
+    completion_evidence: [exterior_lights_state]
+    primary_operation: set_low_beams
+
+  - id: interior_lighting
+    domain: interior_lights
+    intent_patterns: [set_reading_light, set_ambient_lights]
+    read_operations:
+      - semantic_operation: read_reading_lights
+        tool_names: [get_reading_lights_status]
+      - semantic_operation: read_ambient_lights
+        tool_names: [get_ambient_light_status_and_color]
+    write_operations:
+      - semantic_operation: set_reading_light
+        tool_names: [set_reading_light]
+        parameter_mapping: {position: position, enabled: "on"}
+        required_semantic_parameters: [position, enabled]
+      - semantic_operation: set_ambient_lights
+        tool_names: [set_ambient_lights]
+        parameter_mapping: {enabled: "on", color: lightcolor}
+        required_semantic_parameters: [enabled, color]
+    evidence_needs: []
+    parameter_derivations: [light_position_state_and_color_from_intent]
+    policy_hooks: []
+    parallel_read_groups: [[read_reading_lights, read_ambient_lights]]
+    write_order: [set_reading_light, set_ambient_lights]
+    completion_evidence: [interior_lights_state]
+    primary_operation: set_reading_light
+
+  - id: ambient_car_color_match
+    domain: interior_lights
+    intent_patterns: [match_ambient_lights_to_car_color]
+    read_operations:
+      - semantic_operation: read_car_exterior_color
+        tool_names: [get_car_color]
+    write_operations:
+      - semantic_operation: match_ambient_lights_to_car_color
+        tool_names: [set_ambient_lights]
+        parameter_mapping: {enabled: "on", color: lightcolor}
+        required_semantic_parameters: [enabled, color]
+    evidence_needs:
+      - proposition: ambient_car_exterior_color
+        read_operation: read_car_exterior_color
+    parameter_derivations: [ambient_color_from_verified_exterior_color]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: [match_ambient_lights_to_car_color]
+    completion_evidence: [interior_lights_state]
+    primary_operation: match_ambient_lights_to_car_color
+
+  - id: occupancy_reading_lights
+    domain: interior_lights
+    intent_patterns: [sync_reading_lights_to_seat_occupancy]
+    read_operations:
+      - semantic_operation: read_seat_occupancy_for_lights
+        tool_names: [get_seats_occupancy]
+      - semantic_operation: read_current_reading_lights
+        tool_names: [get_reading_lights_status]
+    write_operations:
+      - semantic_operation: sync_reading_lights_to_seat_occupancy
+        tool_names: [set_reading_light]
+        parameter_mapping: {position: position, enabled: "on"}
+        required_semantic_parameters: [position, enabled]
+    evidence_needs:
+      - proposition: reading_light_seat_occupancy
+        read_operation: read_seat_occupancy_for_lights
+      - proposition: reading_lights_state
+        read_operation: read_current_reading_lights
+    parameter_derivations: [reading_light_deltas_from_occupancy_and_current_state]
+    policy_hooks: []
+    parallel_read_groups:
+      - [read_seat_occupancy_for_lights, read_current_reading_lights]
+    write_order: [sync_reading_lights_to_seat_occupancy]
+    completion_evidence: [verified_reading_lights_state]
+    primary_operation: sync_reading_lights_to_seat_occupancy
+
+  - id: navigation_create
+    domain: navigation_create
+    intent_patterns: [create_navigation, start_navigation, set_new_navigation, navigate_to]
+    read_operations:
+      - semantic_operation: read_current_navigation_for_create
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+      - semantic_operation: resolve_location
+        tool_names: [get_location_id_by_location_name]
+        parameter_mapping: {location: location}
+        required_semantic_parameters: [location]
+      - semantic_operation: find_routes
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping: {start_id: start_id, destination_id: destination_id}
+        required_semantic_parameters: [start_id, destination_id]
+    write_operations:
+      - semantic_operation: set_new_navigation
+        tool_names: [set_new_navigation]
+        parameter_mapping: {route_ids: route_ids}
+        required_semantic_parameters: [route_ids]
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation_for_create
+      - proposition: resolved_navigation_location_id
+        read_operation: resolve_location
+      - proposition: route_options
+        read_operation: find_routes
+    parameter_derivations: [location_ids_then_route_ids]
+    policy_hooks: [POL-016, POL-018, POL-021, POL-022]
+    parallel_read_groups: []
+    write_order: [set_new_navigation]
+    completion_evidence: [active_navigation]
+    primary_operation: set_new_navigation
+
+  - id: navigation_resume_previous
+    domain: navigation_create
+    intent_patterns: [resume_previous_navigation]
+    read_operations:
+      - semantic_operation: read_current_navigation_for_resume
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+    write_operations:
+      - semantic_operation: set_new_navigation
+        tool_names: [set_new_navigation]
+        parameter_mapping: {route_ids: route_ids}
+        required_semantic_parameters: [route_ids]
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation_for_resume
+    parameter_derivations: [route_ids_from_inactive_navigation_snapshot]
+    policy_hooks: [POL-016, POL-018, POL-021, POL-022]
+    parallel_read_groups: []
+    write_order: [set_new_navigation]
+    completion_evidence: [active_navigation]
+    primary_operation: set_new_navigation
+
+  - id: navigation_create_with_charging_stop
+    domain: navigation_create
+    intent_patterns: [navigate_with_charging_stop]
+    read_operations:
+      - semantic_operation: read_current_navigation_for_charging_stop
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+      - semantic_operation: find_routes_after_charging_stop
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping: {charging_station_id: start_id, destination_id: destination_id}
+        required_semantic_parameters: [charging_station_id, destination_id]
+    write_operations:
+      - semantic_operation: create_navigation_with_charging_stop
+        tool_names: [set_new_navigation]
+        parameter_mapping: {route_ids: route_ids}
+        required_semantic_parameters: [route_ids]
+    evidence_needs:
+      - proposition: selected_local_charging_plan
+        acceptable_sources: [derived]
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation_for_charging_stop
+      - proposition: local_charging_second_segment_routes
+        read_operation: find_routes_after_charging_stop
+    parameter_derivations: [ordered_multisegment_routes_from_current_evidence]
+    policy_hooks: [POL-016, POL-018, POL-021, POL-022]
+    parallel_read_groups: []
+    write_order: [create_navigation_with_charging_stop]
+    completion_evidence: [active_navigation]
+    primary_operation: create_navigation_with_charging_stop
+
+  - id: meeting_charging_navigation
+    domain: navigation_create
+    intent_patterns: [set_meeting_charging_navigation]
+    read_operations:
+      - semantic_operation: read_current_navigation_for_meeting_charging
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+    write_operations:
+      - semantic_operation: set_meeting_charging_navigation
+        tool_names: [set_new_navigation]
+        parameter_mapping: {route_ids: route_ids}
+        required_semantic_parameters: [route_ids]
+    evidence_needs:
+      - proposition: meeting_charging_analysis_summary
+        acceptable_sources: [derived]
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation_for_meeting_charging
+    parameter_derivations: []
+    policy_hooks: [POL-016, POL-018, POL-021, POL-022]
+    parallel_read_groups: []
+    write_order: [set_meeting_charging_navigation]
+    completion_evidence: [active_navigation]
+    primary_operation: set_meeting_charging_navigation
+
+  - id: route_presentation
+    domain: route_presentation
+    intent_patterns: [show_route, present_route, get_route, get_current_navigation]
+    read_operations:
+      - semantic_operation: read_current_navigation
+        tool_names: [get_current_navigation_state]
+        parameter_mapping: {detailed: detailed_information}
+      - semantic_operation: convert_route_measurement
+        tool_names: [convert_route_distance_and_time]
+        parameter_mapping: {route_id: route_id, time_minutes: time_minutes, distance_km: distance_km}
+        required_semantic_parameters: [route_id]
+    write_operations: []
+    evidence_needs: []
+    parameter_derivations: [route_presentation_from_observed_route]
+    policy_hooks: [POL-021, POL-022]
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [route_details]
+    primary_operation: read_current_navigation
+
+  - id: navigation_add_waypoint
+    domain: navigation_edit
+    intent_patterns: [add_navigation_waypoint, navigation_add_one_waypoint]
+    read_operations:
+      - semantic_operation: read_current_navigation
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+      - semantic_operation: resolve_added_waypoint_location
+        tool_names: [get_location_id_by_location_name]
+        parameter_mapping: {new_waypoint_name: location}
+        required_semantic_parameters: [new_waypoint_name]
+      - semantic_operation: find_route_to_added_waypoint
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping:
+          previous_waypoint_id: start_id
+          new_waypoint_id: destination_id
+        required_semantic_parameters: [previous_waypoint_id, new_waypoint_id]
+      - semantic_operation: find_route_from_added_waypoint
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping:
+          new_waypoint_id: start_id
+          next_waypoint_id: destination_id
+        required_semantic_parameters: [new_waypoint_id, next_waypoint_id]
+    write_operations:
+      - semantic_operation: navigation_add_one_waypoint
+        tool_names: [navigation_add_one_waypoint]
+        parameter_mapping:
+          new_waypoint_id: waypoint_id_to_add
+          previous_waypoint_id: waypoint_id_before_new_waypoint
+          next_waypoint_id: waypoint_id_after_new_waypoint
+          route_id_leading_to_waypoint: route_id_leading_to_new_waypoint
+          route_id_leading_away_from_waypoint: route_id_leading_away_from_new_waypoint
+        required_semantic_parameters: [new_waypoint_id, previous_waypoint_id, route_id_leading_to_waypoint]
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation
+      - proposition: resolved_navigation_location_id
+        read_operation: resolve_added_waypoint_location
+      - proposition: route_to_replacement_options
+        read_operation: find_route_to_added_waypoint
+      - proposition: route_from_replacement_options
+        read_operation: find_route_from_added_waypoint
+        required_before_set: false
+    parameter_derivations: [added_waypoint_and_routes_from_current_navigation]
+    policy_hooks: [POL-017, POL-018]
+    parallel_read_groups: []
+    write_order: [navigation_add_one_waypoint]
+    completion_evidence: [active_navigation]
+    primary_operation: navigation_add_one_waypoint
+
+  - id: navigation_replace_waypoint
+    domain: navigation_edit
+    intent_patterns: [replace_navigation_waypoint, navigation_replace_one_waypoint]
+    read_operations:
+      - semantic_operation: read_current_navigation
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+      - semantic_operation: resolve_replacement_location
+        tool_names: [get_location_id_by_location_name]
+        parameter_mapping: {new_waypoint_name: location}
+        required_semantic_parameters: [new_waypoint_name]
+      - semantic_operation: find_route_to_replacement
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping:
+          replacement_previous_waypoint_id: start_id
+          replacement_new_waypoint_id: destination_id
+        required_semantic_parameters: [replacement_previous_waypoint_id, replacement_new_waypoint_id]
+      - semantic_operation: find_route_from_replacement
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping:
+          replacement_new_waypoint_id: start_id
+          replacement_next_waypoint_id: destination_id
+        required_semantic_parameters: [replacement_new_waypoint_id, replacement_next_waypoint_id]
+    write_operations:
+      - semantic_operation: navigation_replace_one_waypoint
+        tool_names: [navigation_replace_one_waypoint]
+        parameter_mapping:
+          waypoint_id_to_replace: waypoint_id_to_replace
+          new_waypoint_id: new_waypoint_id
+          route_id_leading_to_new_waypoint: route_id_leading_to_new_waypoint
+          route_id_leading_away_from_new_waypoint: route_id_leading_away_from_new_waypoint
+        required_semantic_parameters: [waypoint_id_to_replace, new_waypoint_id, route_id_leading_to_new_waypoint, route_id_leading_away_from_new_waypoint]
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation
+      - proposition: resolved_navigation_location_id
+        read_operation: resolve_replacement_location
+      - proposition: route_to_replacement_options
+        read_operation: find_route_to_replacement
+      - proposition: route_from_replacement_options
+        read_operation: find_route_from_replacement
+    parameter_derivations: [replacement_routes_from_current_navigation]
+    policy_hooks: [POL-017, POL-018]
+    parallel_read_groups: []
+    write_order: [navigation_replace_one_waypoint]
+    completion_evidence: [active_navigation]
+    primary_operation: navigation_replace_one_waypoint
+
+  - id: navigation_replace_destination
+    domain: navigation_edit
+    intent_patterns: [replace_navigation_destination, navigation_replace_final_destination]
+    read_operations:
+      - semantic_operation: read_current_navigation
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+      - semantic_operation: resolve_replacement_destination
+        tool_names: [get_location_id_by_location_name]
+        parameter_mapping: {new_destination_name: location}
+        required_semantic_parameters: [new_destination_name]
+      - semantic_operation: find_routes_to_replacement_destination
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping:
+          replacement_route_start_id: start_id
+          new_destination_id: destination_id
+        required_semantic_parameters: [replacement_route_start_id, new_destination_id]
+    write_operations:
+      - semantic_operation: navigation_replace_final_destination
+        tool_names: [navigation_replace_final_destination]
+        parameter_mapping: {new_destination_id: new_destination_id, route_id: route_id_leading_to_new_destination}
+        required_semantic_parameters: [new_destination_id, route_id]
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation
+      - proposition: replacement_destination_location_id
+        acceptable_sources: [tool_result, derived]
+        read_operation: resolve_replacement_destination
+      - proposition: replacement_destination_route_options
+        read_operation: find_routes_to_replacement_destination
+    parameter_derivations: [destination_route_from_current_location_and_user_selection]
+    policy_hooks: [POL-017, POL-018]
+    parallel_read_groups: []
+    write_order: [navigation_replace_final_destination]
+    completion_evidence: [active_navigation]
+    primary_operation: navigation_replace_final_destination
+
+  - id: navigation_delete_waypoint
+    domain: navigation_delete
+    intent_patterns: [delete_navigation_waypoint, navigation_delete_one_waypoint]
+    read_operations:
+      - semantic_operation: read_current_navigation
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+      - semantic_operation: find_route_without_deleted_waypoint
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping:
+          delete_route_start_id: start_id
+          delete_route_destination_id: destination_id
+        required_semantic_parameters: [delete_route_start_id, delete_route_destination_id]
+    write_operations:
+      - semantic_operation: navigation_delete_one_waypoint
+        tool_names: [navigation_delete_waypoint]
+        parameter_mapping: {waypoint_id: waypoint_id_to_delete, replacement_route_id: route_id_without_waypoint}
+        required_semantic_parameters: [waypoint_id, replacement_route_id]
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation
+      - proposition: waypoint_delete_route_options
+        read_operation: find_route_without_deleted_waypoint
+    parameter_derivations: [waypoint_and_route_from_current_navigation]
+    policy_hooks: [POL-017, POL-018]
+    parallel_read_groups: []
+    write_order: [navigation_delete_one_waypoint]
+    completion_evidence: [active_navigation]
+    primary_operation: navigation_delete_one_waypoint
+
+  - id: navigation_delete_destination
+    domain: navigation_delete
+    intent_patterns: [delete_navigation_destination, navigation_delete_final_destination]
+    read_operations:
+      - semantic_operation: read_current_navigation
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+    write_operations:
+      - semantic_operation: navigation_delete_final_destination
+        tool_names: [navigation_delete_destination]
+        parameter_mapping: {destination_id: destination_id_to_delete}
+        required_semantic_parameters: [destination_id]
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation
+    parameter_derivations: [destination_id_from_current_navigation]
+    policy_hooks: [POL-017, POL-018, POL-019]
+    parallel_read_groups: []
+    write_order: [navigation_delete_final_destination]
+    completion_evidence: [active_navigation]
+    primary_operation: navigation_delete_final_destination
+
+  - id: navigation_delete_all
+    domain: navigation_delete
+    intent_patterns: [delete_navigation, cancel_navigation, delete_current_navigation]
+    read_operations:
+      - semantic_operation: read_current_navigation
+        tool_names: [get_current_navigation_state]
+    write_operations:
+      - semantic_operation: delete_current_navigation
+        tool_names: [delete_current_navigation]
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation
+    parameter_derivations: []
+    policy_hooks: [POL-018]
+    parallel_read_groups: []
+    write_order: [delete_current_navigation]
+    completion_evidence: [navigation_inactive]
+    primary_operation: delete_current_navigation
+
+  - id: next_navigation_stop_poi_search
+    domain: poi
+    intent_patterns: [search_poi_at_next_navigation_stop]
+    read_operations:
+      - semantic_operation: read_next_navigation_stop
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+      - semantic_operation: search_poi_at_next_navigation_stop
+        tool_names: [search_poi_at_location]
+        parameter_mapping: {next_stop_location_id: location_id, category: category_poi}
+        required_semantic_parameters: [next_stop_location_id, category]
+    write_operations: []
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_next_navigation_stop
+      - proposition: current_destination_poi_candidates
+        read_operation: search_poi_at_next_navigation_stop
+    parameter_derivations: [next_intermediate_stop_from_current_navigation]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [current_destination_poi_candidates]
+    primary_operation: search_poi_at_next_navigation_stop
+
+  - id: current_destination_poi_search
+    domain: poi
+    intent_patterns: [search_poi_at_current_destination]
+    read_operations:
+      - semantic_operation: read_current_destination_navigation
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+      - semantic_operation: search_poi_at_current_destination
+        tool_names: [search_poi_at_location]
+        parameter_mapping: {destination_location_id: location_id, category: category_poi}
+        required_semantic_parameters: [destination_location_id, category]
+    write_operations: []
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_destination_navigation
+      - proposition: current_destination_poi_candidates
+        read_operation: search_poi_at_current_destination
+    parameter_derivations: [final_destination_from_current_navigation]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [current_destination_poi_candidates]
+    primary_operation: search_poi_at_current_destination
+
+  - id: displayed_destination_poi_call
+    domain: phone
+    intent_patterns: [call_displayed_poi]
+    read_operations: []
+    write_operations:
+      - semantic_operation: call_displayed_poi
+        tool_names: [call_phone_by_number]
+        parameter_mapping: {phone_number: phone_number}
+        required_semantic_parameters: [phone_number]
+    evidence_needs:
+      - proposition: displayed_destination_poi_candidates
+        acceptable_sources: [derived]
+    parameter_derivations: [phone_number_from_displayed_poi_evidence]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: [call_displayed_poi]
+    completion_evidence: [phone_call_started]
+    primary_operation: call_displayed_poi
+    terminal_after_success: true
+
+  - id: poi_search
+    domain: poi
+    intent_patterns: [search_poi, search_poi_at_location, find_poi]
+    read_operations:
+      - semantic_operation: resolve_poi_location
+        tool_names: [get_location_id_by_location_name]
+        parameter_mapping: {location_name: location}
+        required_semantic_parameters: [location_name]
+      - semantic_operation: search_poi_at_location
+        tool_names: [search_poi_at_location]
+        parameter_mapping: {location_id: location_id, category: category_poi, filters: filters}
+        required_semantic_parameters: [location_id, category]
+      - semantic_operation: search_poi_along_route
+        tool_names: [search_poi_along_the_route]
+        parameter_mapping: {route_id: route_id, category: category_poi, at_kilometer: at_kilometer, filters: filters}
+        required_semantic_parameters: [route_id, category]
+    write_operations: []
+    evidence_needs:
+      - proposition: poi_location_id
+        read_operation: resolve_poi_location
+      - proposition: poi_candidates
+        read_operation: search_poi_at_location
+    parameter_derivations: [poi_location_id_from_exact_name, poi_filters_from_intent_and_preferences]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [poi_candidates]
+    primary_operation: search_poi_at_location
+
+  - id: local_charging_station_search
+    domain: poi
+    intent_patterns: [search_local_charging_stations]
+    read_operations:
+      - semantic_operation: search_local_charging_stations
+        tool_names: [search_poi_at_location]
+        parameter_mapping:
+          current_location_id: location_id
+          category: category_poi
+          filters: filters
+        required_semantic_parameters: [current_location_id, category]
+    write_operations: []
+    evidence_needs:
+      - proposition: local_charging_station_candidates
+        read_operation: search_local_charging_stations
+    parameter_derivations: [current_location_from_compiled_policy]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [local_charging_station_candidates]
+    primary_operation: search_local_charging_stations
+
+  - id: contacts_lookup
+    domain: contacts
+    intent_patterns: [find_contact, get_contact, resolve_contact]
+    read_operations:
+      - semantic_operation: find_contact_ids
+        tool_names: [get_contact_id_by_contact_name]
+        parameter_mapping: {first_name: contact_first_name, last_name: contact_last_name}
+      - semantic_operation: read_contact_information
+        tool_names: [get_contact_information]
+        parameter_mapping: {contact_ids: contact_ids}
+        required_semantic_parameters: [contact_ids]
+    write_operations: []
+    evidence_needs: []
+    parameter_derivations: [contact_id_then_contact_information]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [contact_information]
+    primary_operation: find_contact_ids
+
+  - id: phone_call
+    domain: phone
+    intent_patterns: [call_contact, call_phone, call_phone_by_number]
+    read_operations:
+      - semantic_operation: find_contact_ids
+        tool_names: [get_contact_id_by_contact_name]
+        parameter_mapping: {first_name: contact_first_name, last_name: contact_last_name}
+      - semantic_operation: read_contact_information
+        tool_names: [get_contact_information]
+        parameter_mapping: {contact_ids: contact_ids}
+        required_semantic_parameters: [contact_ids]
+    write_operations:
+      - semantic_operation: call_phone_by_number
+        tool_names: [call_phone_by_number]
+        parameter_mapping: {phone_number: phone_number}
+        required_semantic_parameters: [phone_number]
+    evidence_needs:
+      - proposition: contact_information
+        read_operation: read_contact_information
+    parameter_derivations: [phone_number_from_unique_contact]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: [call_phone_by_number]
+    completion_evidence: [phone_call_started]
+    primary_operation: call_phone_by_number
+    terminal_after_success: true
+
+  - id: meeting_charging_provider_call
+    domain: phone
+    intent_patterns: [call_meeting_charging_provider]
+    read_operations: []
+    write_operations:
+      - semantic_operation: call_meeting_charging_provider
+        tool_names: [call_phone_by_number]
+        parameter_mapping: {phone_number: phone_number}
+        required_semantic_parameters: [phone_number]
+    evidence_needs:
+      - proposition: meeting_charging_navigation_completion
+        acceptable_sources: [derived]
+    parameter_derivations: []
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: [call_meeting_charging_provider]
+    completion_evidence: [phone_call_started]
+    primary_operation: call_meeting_charging_provider
+    terminal_after_success: true
+
+  - id: email_send
+    domain: email
+    intent_patterns: [send_email, email_contact]
+    read_operations:
+      - semantic_operation: find_contact_ids
+        tool_names: [get_contact_id_by_contact_name]
+        parameter_mapping: {first_name: contact_first_name, last_name: contact_last_name}
+      - semantic_operation: read_contact_information
+        tool_names: [get_contact_information]
+        parameter_mapping: {contact_ids: contact_ids}
+        required_semantic_parameters: [contact_ids]
+    write_operations:
+      - semantic_operation: send_email
+        tool_names: [send_email]
+        parameter_mapping: {message: content_message, email_addresses: email_addresses}
+        required_semantic_parameters: [message, email_addresses]
+    evidence_needs:
+      - proposition: contact_information
+        read_operation: read_contact_information
+    parameter_derivations: [email_addresses_from_unique_contacts]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: [send_email]
+    completion_evidence: [email_sent]
+    primary_operation: send_email
+
+  - id: calendar_lookup
+    domain: calendar
+    intent_patterns: [get_calendar, check_calendar, get_entries_from_calendar]
+    read_operations:
+      - semantic_operation: get_entries_from_calendar
+        tool_names: [get_entries_from_calendar]
+        parameter_mapping: {month: month, day: day}
+        required_semantic_parameters: [month, day]
+    write_operations: []
+    evidence_needs: []
+    parameter_derivations: [calendar_date_from_intent_and_system_time]
+    policy_hooks: [POL-023]
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [calendar_entries]
+    primary_operation: get_entries_from_calendar
+
+  - id: weather_lookup
+    domain: weather
+    intent_patterns: [get_weather, check_weather, weather_forecast]
+    read_operations:
+      - semantic_operation: get_weather
+        tool_names: [get_weather]
+        parameter_mapping:
+          location_id: location_or_poi_id
+          month: month
+          day: day
+          hour: time_hour_24hformat
+          minute: time_minutes
+        required_semantic_parameters: [location_id, month, day, hour]
+    write_operations: []
+    evidence_needs: []
+    parameter_derivations: [weather_datetime_from_intent_and_system_time]
+    policy_hooks: [POL-024]
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [weather_observation]
+    primary_operation: get_weather
+
+  - id: trip_range_feasibility
+    domain: ev_range
+    intent_patterns: [assess_battery_charge_trip_range, check_trip_range_feasibility]
+    read_operations:
+      - semantic_operation: assess_battery_charge_trip_range
+        tool_names: [get_charging_specs_and_status]
+      - semantic_operation: resolve_trip_destination
+        tool_names: [get_location_id_by_location_name]
+        parameter_mapping: {destination_name: location}
+        required_semantic_parameters: [destination_name]
+      - semantic_operation: find_trip_route
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping: {trip_start_id: start_id, trip_destination_id: destination_id}
+        required_semantic_parameters: [trip_start_id, trip_destination_id]
+    write_operations: []
+    evidence_needs:
+      - proposition: trip_charging_status
+        read_operation: assess_battery_charge_trip_range
+      - proposition: trip_destination_location_id
+        read_operation: resolve_trip_destination
+      - proposition: trip_route_options
+        read_operation: find_trip_route
+    parameter_derivations: [trip_endpoint_and_range_comparison_from_evidence]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [trip_range_feasibility]
+    primary_operation: assess_battery_charge_trip_range
+
+  - id: ev_range
+    domain: ev_range
+    intent_patterns: [get_ev_range, read_charging_status]
+    read_operations:
+      - semantic_operation: read_charging_status
+        tool_names: [get_charging_specs_and_status]
+      - semantic_operation: get_distance_by_soc
+        tool_names: [get_distance_by_soc]
+        parameter_mapping: {initial_soc: initial_state_of_charge, final_soc: final_state_of_charge}
+        required_semantic_parameters: [initial_soc]
+    write_operations: []
+    evidence_needs: []
+    parameter_derivations: [initial_soc_from_current_charging_status]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [estimated_driving_range]
+    primary_operation: read_charging_status
+
+  - id: charging_station
+    domain: charging_station
+    intent_patterns: [charging_status, read_charging_status]
+    read_operations:
+      - semantic_operation: read_charging_status
+        tool_names: [get_charging_specs_and_status]
+      - semantic_operation: calculate_charging_time
+        tool_names: [calculate_charging_time_by_soc]
+        parameter_mapping:
+          station_id: charging_station_id
+          plug_id: charging_station_plug_id
+          start_soc: start_state_of_charge
+          target_soc: target_state_of_charge
+        required_semantic_parameters: [station_id, plug_id, start_soc]
+      - semantic_operation: calculate_charging_soc
+        tool_names: [calculate_charging_soc_by_time]
+        parameter_mapping:
+          station_id: charging_station_id
+          plug_id: charging_station_plug_id
+          start_soc: start_state_of_charge
+          charging_time: charging_time
+        required_semantic_parameters: [station_id, plug_id, start_soc, charging_time]
+    write_operations: []
+    evidence_needs: []
+    parameter_derivations: [charging_inputs_from_station_and_vehicle_state]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [charging_estimate]
+    primary_operation: read_charging_status
+
+  - id: local_charging_stop_estimate
+    domain: charging_station
+    intent_patterns: [estimate_local_charging_stop]
+    read_operations:
+      - semantic_operation: calculate_local_charging_time
+        tool_names: [calculate_charging_time_by_soc]
+        parameter_mapping:
+          charging_station_id: charging_station_id
+          charging_station_plug_id: charging_station_plug_id
+          start_state_of_charge: start_state_of_charge
+          target_state_of_charge: target_state_of_charge
+        required_semantic_parameters:
+          [charging_station_id, charging_station_plug_id, start_state_of_charge, target_state_of_charge]
+      - semantic_operation: find_routes_to_local_charging_stop
+        tool_names: [get_routes_from_start_to_destination]
+        parameter_mapping:
+          current_location_id: start_id
+          charging_station_id: destination_id
+        required_semantic_parameters: [current_location_id, charging_station_id]
+    write_operations: []
+    evidence_needs:
+      - proposition: local_charging_time_result
+        read_operation: calculate_local_charging_time
+      - proposition: local_charging_first_segment_routes
+        read_operation: find_routes_to_local_charging_stop
+    parameter_derivations: [charging_stop_inputs_from_displayed_station_evidence]
+    policy_hooks: []
+    parallel_read_groups:
+      [[calculate_local_charging_time, find_routes_to_local_charging_stop]]
+    write_order: []
+    completion_evidence: [local_charging_time_result, local_charging_first_segment_routes]
+    primary_operation: calculate_local_charging_time
+
+  - id: route_aware_charging
+    domain: route_aware_charging
+    intent_patterns: [plan_route_with_charging, route_aware_charging, find_charger_along_route]
+    read_operations:
+      - semantic_operation: read_current_navigation
+        tool_names: [get_current_navigation_state]
+        fixed_arguments: {detailed_information: true}
+      - semantic_operation: search_charger_along_route
+        tool_names: [search_poi_along_the_route]
+        parameter_mapping: {route_id: route_id, filters: filters}
+        required_semantic_parameters: [route_id]
+        fixed_arguments: {category_poi: charging_stations}
+      - semantic_operation: read_charging_status
+        tool_names: [get_charging_specs_and_status]
+      - semantic_operation: estimate_ev_range
+        tool_names: [get_distance_by_soc]
+        parameter_mapping: {initial_soc: initial_state_of_charge, final_soc: final_state_of_charge}
+        required_semantic_parameters: [initial_soc]
+    write_operations:
+      - semantic_operation: add_charging_waypoint
+        tool_names: [navigation_add_one_waypoint]
+        parameter_mapping:
+          station_id: waypoint_id_to_add
+          previous_waypoint_id: waypoint_id_before_new_waypoint
+          next_waypoint_id: waypoint_id_after_new_waypoint
+          inbound_route_id: route_id_leading_to_new_waypoint
+          outbound_route_id: route_id_leading_away_from_new_waypoint
+        required_semantic_parameters: [station_id, previous_waypoint_id, inbound_route_id]
+    evidence_needs:
+      - proposition: current_navigation_state
+        read_operation: read_current_navigation
+      - proposition: current_state_of_charge
+        read_operation: read_charging_status
+      - proposition: charging_station_candidates
+        read_operation: search_charger_along_route
+    parameter_derivations: [charging_stop_from_route_range_and_station_evidence]
+    policy_hooks: [POL-016, POL-021, POL-022]
+    parallel_read_groups: [[read_current_navigation, read_charging_status]]
+    write_order: [add_charging_waypoint]
+    completion_evidence: [active_navigation_with_charging_stop]
+    primary_operation: add_charging_waypoint
+
+  - id: cross_domain_request
+    domain: cross_domain
+    intent_patterns: [cross_domain_request, multi_goal_request]
+    read_operations:
+      - semantic_operation: read_user_preferences
+        tool_names: [get_user_preferences]
+        parameter_mapping: {preference_categories: preference_categories}
+        required_semantic_parameters: [preference_categories]
+    write_operations: []
+    evidence_needs: []
+    parameter_derivations: [split_into_independent_or_dependent_semantic_goals]
+    policy_hooks: []
+    parallel_read_groups: []
+    write_order: []
+    completion_evidence: [component_goal_completion]
+    primary_operation: read_user_preferences

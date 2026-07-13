@@ -1,0 +1,17 @@
+**
+!src/
+src/**
+!src/logging_utils.py
+!src/tool_call_types.py
+!src/turn_metrics.py
+!src/track_1_agent_under_test/
+src/track_1_agent_under_test/**
+!src/track_1_agent_under_test/server.py
+!src/track_1_agent_under_test/car_bench_agent.py
+!src/track_1_agent_under_test/car_guard/
+!src/track_1_agent_under_test/car_guard/**
+!src/track_1_agent_under_test/production/
+!src/track_1_agent_under_test/production/pyproject.toml
+!src/track_1_agent_under_test/production/uv.lock
+src/track_1_agent_under_test/**/__pycache__/
+src/track_1_agent_under_test/**/*.py[cod]

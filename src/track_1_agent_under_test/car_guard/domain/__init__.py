@@ -1,0 +1,60 @@
+"""Public CAR-Guard domain model API."""
+
+from .evidence import (
+    Evidence,
+    EvidenceCardinality,
+    EvidenceNeed,
+    EvidenceSourceKind,
+    EvidenceStatus,
+    EvidenceStore,
+)
+from .goals import Goal, GoalDAG, GoalSource, GoalStatus
+from .intent import IntentFrame, IntentKind, IntentState
+from .types import (
+    AmbiguitySlot,
+    Candidate,
+    CommitDecision,
+    Confirmation,
+    ConfirmationScope,
+    ConfirmationStatus,
+    DecisionProposal,
+    DomainModel,
+    Elimination,
+    GateOutcome,
+    GateReason,
+    OfficialToolCall,
+    ProposalKind,
+    ProposedToolCall,
+    ResolutionLevel,
+)
+
+__all__ = [
+    "AmbiguitySlot",
+    "Candidate",
+    "CommitDecision",
+    "Confirmation",
+    "ConfirmationScope",
+    "ConfirmationStatus",
+    "DecisionProposal",
+    "DomainModel",
+    "Elimination",
+    "Evidence",
+    "EvidenceCardinality",
+    "EvidenceNeed",
+    "EvidenceSourceKind",
+    "EvidenceStatus",
+    "EvidenceStore",
+    "GateOutcome",
+    "GateReason",
+    "Goal",
+    "GoalDAG",
+    "GoalSource",
+    "GoalStatus",
+    "IntentFrame",
+    "IntentKind",
+    "IntentState",
+    "OfficialToolCall",
+    "ProposalKind",
+    "ProposedToolCall",
+    "ResolutionLevel",
+]

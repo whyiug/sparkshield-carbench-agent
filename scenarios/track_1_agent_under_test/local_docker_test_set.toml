@@ -1,0 +1,43 @@
+# Local Docker full test-set scenario for the baseline LiteLLM agent under test.
+# Generate with:
+#   uv run python generate_compose.py --scenario scenarios/track_1_agent_under_test/local_docker_test_set.toml
+
+[evaluator]
+image = "ghcr.io/car-bench/car-bench-evaluator:latest"
+env = { GEMINI_API_KEY = "${GEMINI_API_KEY:?Set GEMINI_API_KEY in .env}", LOGURU_LEVEL = "${LOGURU_LEVEL:-INFO}" }
+
+[agent_under_test]
+build = { context = ".", dockerfile = "src/track_1_agent_under_test/Dockerfile.track-1-agent-under-test" }
+
+[agent_under_test.env]
+AGENT_LLM = "${AGENT_LLM:?Set AGENT_LLM in .env}"
+AGENT_PROVIDER = "${AGENT_PROVIDER:?Set AGENT_PROVIDER in .env}"
+AGENT_API_BASE = "${AGENT_API_BASE:-}"
+AGENT_API_KEY = "${AGENT_API_KEY:?Set AGENT_API_KEY in .env}"
+AGENT_DEPLOYMENT = "${AGENT_DEPLOYMENT:-}"
+AGENT_SERVICE_TIER = "${AGENT_SERVICE_TIER:-}"
+AGENT_REASONING_EFFORT = "${AGENT_REASONING_EFFORT:-}"
+AGENT_TEMPERATURE = "${AGENT_TEMPERATURE:-0}"
+AGENT_STRUCTURED_OUTPUT_MODE = "${AGENT_STRUCTURED_OUTPUT_MODE:-json_schema}"
+AGENT_THINKING = "${AGENT_THINKING:-false}"
+AGENT_INTERLEAVED_THINKING = "${AGENT_INTERLEAVED_THINKING:-false}"
+AGENT_ENABLE_CRITIC = "${AGENT_ENABLE_CRITIC:-false}"
+AGENT_CRITIC_MODEL = "${AGENT_CRITIC_MODEL:-}"
+AGENT_CRITIC_PROVIDER = "${AGENT_CRITIC_PROVIDER:-}"
+AGENT_CRITIC_API_BASE = "${AGENT_CRITIC_API_BASE:-}"
+AGENT_CRITIC_API_KEY = "${AGENT_CRITIC_API_KEY:-}"
+AGENT_TIMEOUT_SECONDS = "${AGENT_TIMEOUT_SECONDS:-90}"
+AGENT_MAX_RETRIES = "${AGENT_MAX_RETRIES:-2}"
+AGENT_SOFT_MAX_STEPS = "${AGENT_SOFT_MAX_STEPS:-49}"
+AGENT_MAX_USER_TURNS = "${AGENT_MAX_USER_TURNS:-24}"
+AGENT_SESSION_TTL_SECONDS = "${AGENT_SESSION_TTL_SECONDS:-1800}"
+AGENT_MAX_SESSIONS = "${AGENT_MAX_SESSIONS:-256}"
+LOGURU_LEVEL = "${LOGURU_LEVEL:-INFO}"
+
+[config]
+num_trials = 3
+task_split = "test"
+tasks_base_num_tasks = -1
+tasks_hallucination_num_tasks = -1
+tasks_disambiguation_num_tasks = -1
+max_steps = 50

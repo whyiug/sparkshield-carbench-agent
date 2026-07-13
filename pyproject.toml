@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "car-bench-ijcai"
+version = "0.1.0"
+description = "CAR-bench A2A evaluation harness"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "a2a-sdk[http-server]>=1.0.0",
+    "httpx>=0.28.1",
+    "loguru>=0.7.0",
+    "pydantic>=2.11.9",
+    "python-dotenv>=1.1.1",
+    "pyyaml>=6.0.3",
+    "uvicorn>=0.35.0",
+]
+
+[project.optional-dependencies]
+track-1-agent = [
+    "google-adk>=1.14.1",
+    "google-genai>=1.36.0",
+    "litellm>=1.85.1",
+    "socksio>=1.0.0",
+]
+track-2-agent = [
+    "cerebras-cloud-sdk>=1.50.0",
+]
+car-bench-evaluator = [
+    "nest-asyncio>=1.6.0",
+    "car-bench",
+]
+
+[project.scripts]
+car-bench-run = "agentbeats.run_scenario:main"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.156.5",
+    "mypy>=1.18.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.21",
+    "tomli-w>=1.0.0",
+    "types-protobuf>=6.32.1.20250809",
+]
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+car-bench = { path = "third_party/car-bench" }
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentbeats"]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+mypy_path = "src"
+explicit_package_bases = true
