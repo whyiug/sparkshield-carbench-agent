@@ -37,6 +37,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
+      - name: Install Compose generator dependency
+        run: python3 -m pip install --disable-pip-version-check tomli-w==1.2.0
+
       - name: Enforce public smoke scope and prepare environment
         shell: bash
         run: |
