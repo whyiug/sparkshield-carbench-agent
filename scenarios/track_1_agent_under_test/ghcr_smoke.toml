@@ -5,7 +5,7 @@ image = "ghcr.io/car-bench/car-bench-evaluator:latest"
 env = { GEMINI_API_KEY = "${GEMINI_API_KEY:?Set GEMINI_API_KEY in .env}", LOGURU_LEVEL = "${LOGURU_LEVEL:-INFO}" }
 
 [agent_under_test]
-image = "ghcr.io/whyiug/sparkshield-carbench-agent@sha256:c290a2873d5e5b00badddf8314568150073c9c66812fd39fcf39387aca2d26e3"
+image = "ghcr.io/whyiug/sparkshield-carbench-agent@sha256:4f16a23a086c0d70867ba15036ebb0a5897d241acd49cb487f52e412c6fe70b4"
 
 [agent_under_test.env]
 AGENT_LLM = "${AGENT_LLM:?Set AGENT_LLM in .env}"

@@ -1,0 +1,115 @@
+name: CAR-bench Option C Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: carbench-option-c-smoke
+  cancel-in-progress: false
+
+jobs:
+  option-c-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GEMINI_API_KEY: ${{ secrets.CARBENCH_OPTIONC_GEMINI_API_KEY }}
+      AGENT_API_KEY: ${{ secrets.CARBENCH_OPTIONC_GEMINI_API_KEY }}
+      AGENT_LLM: gemini/gemini-3.5-flash
+      AGENT_PROVIDER: gemini
+      AGENT_API_BASE: ""
+      AGENT_TEMPERATURE: "0"
+      AGENT_STRUCTURED_OUTPUT_MODE: json_schema
+      AGENT_THINKING: "false"
+      AGENT_INTERLEAVED_THINKING: "false"
+      AGENT_ENABLE_CRITIC: "false"
+      AGENT_TIMEOUT_SECONDS: "90"
+      AGENT_MAX_RETRIES: "2"
+      AGENT_SOFT_MAX_STEPS: "49"
+      AGENT_MAX_USER_TURNS: "24"
+      AGENT_SESSION_TTL_SECONDS: "1800"
+      AGENT_MAX_SESSIONS: "256"
+      LOGURU_LEVEL: INFO
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Enforce public smoke scope and prepare environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import tomllib
+          from pathlib import Path
+
+          scenario_path = Path(
+              "scenarios/track_1_agent_under_test/ghcr_smoke.toml"
+          )
+          with scenario_path.open("rb") as handle:
+              scenario = tomllib.load(handle)
+
+          config = scenario["config"]
+          assert config["task_split"] == "train"
+          assert config["num_trials"] == 1
+          assert config["tasks_base_num_tasks"] == 1
+          assert config["tasks_hallucination_num_tasks"] == 1
+          assert config["tasks_disambiguation_num_tasks"] == 1
+          assert os.environ.get("GEMINI_API_KEY")
+          assert os.environ.get("AGENT_API_KEY")
+
+          names = (
+              "GEMINI_API_KEY",
+              "AGENT_API_KEY",
+              "AGENT_LLM",
+              "AGENT_PROVIDER",
+              "AGENT_API_BASE",
+              "AGENT_TEMPERATURE",
+              "AGENT_STRUCTURED_OUTPUT_MODE",
+              "AGENT_THINKING",
+              "AGENT_INTERLEAVED_THINKING",
+              "AGENT_ENABLE_CRITIC",
+              "AGENT_TIMEOUT_SECONDS",
+              "AGENT_MAX_RETRIES",
+              "AGENT_SOFT_MAX_STEPS",
+              "AGENT_MAX_USER_TURNS",
+              "AGENT_SESSION_TTL_SECONDS",
+              "AGENT_MAX_SESSIONS",
+              "LOGURU_LEVEL",
+          )
+          content = "".join(
+              f"{name}={json.dumps(os.environ.get(name, ''))}\n"
+              for name in names
+          )
+          Path(".env").write_text(content, encoding="utf-8")
+          Path(".env").chmod(0o600)
+          print("PUBLIC_SMOKE_SCOPE=PASS")
+          PY
+
+      - name: Generate stock Option C Compose
+        run: |
+          python3 generate_compose.py \
+            --scenario scenarios/track_1_agent_under_test/ghcr_smoke.toml
+
+      - name: Run stock Option C Compose
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          compose_file=scenarios/track_1_agent_under_test/docker-compose.yml
+          cleanup() {
+            docker compose \
+              --env-file .env \
+              -f "$compose_file" \
+              down --remove-orphans >/dev/null 2>&1 || true
+            rm -f .env
+          }
+          trap cleanup EXIT
+          docker compose \
+            --env-file .env \
+            -f "$compose_file" \
+            up --abort-on-container-exit \
+            2>&1 | tee option-c-compose.log
