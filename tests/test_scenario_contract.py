@@ -74,6 +74,26 @@ class ScenarioContractTest(unittest.TestCase):
         self.assertIn("docker compose --env-file .env", compose)
         self.assertNotIn("green-agent", compose)
 
+    def test_track1_image_packages_official_compose_healthcheck_client(self) -> None:
+        compose = generate_docker_compose(
+            self._scenario(),
+            output_dir=Path("scenarios/track_1_agent_under_test"),
+        )
+        healthcheck = (
+            'test: ["CMD", "curl", "-f", '
+            '"http://localhost:9009/.well-known/agent-card.json"]'
+        )
+        self.assertEqual(compose.count(healthcheck), 2)
+
+        dockerfile = Path(
+            "src/track_1_agent_under_test/"
+            "Dockerfile.track-1-agent-under-test"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "apt-get install -y --no-install-recommends curl",
+            dockerfile,
+        )
+
     def test_agent_scenario_directories_use_standard_matrix(self) -> None:
         for scenario_dir in SCENARIO_DIRS:
             with self.subTest(scenario_dir=str(scenario_dir)):

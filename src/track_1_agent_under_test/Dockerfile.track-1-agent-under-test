@@ -13,7 +13,10 @@ RUN uv sync --frozen --no-install-project --no-dev
 
 FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim@sha256:3137a0b606f65a74ee0245f43dae219b09e8af98fc37fef20841cbceef35a646
 
-RUN adduser --disabled-password --gecos "" carbench \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && adduser --disabled-password --gecos "" carbench \
     && mkdir -p /home/carbench/app \
     && chown -R carbench:carbench /home/carbench/app
 USER carbench
